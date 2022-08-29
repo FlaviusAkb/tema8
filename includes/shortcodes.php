@@ -7,7 +7,7 @@ function wpr_software_shortcode( $attr ) {
 			'h1-text'    => '',
 		),
 		$attr
-);
+	);
 	ob_start();
 	?>
 	<?php if ( 'true' === $args['h1'] ) { ?>

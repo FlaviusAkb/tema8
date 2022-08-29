@@ -41,9 +41,10 @@ function search() {
 
 	<!-- Input -->
 	<div class="search_bar" style="display: inline-block">
-		<input type="text" name="s" placeholder="Search Code..." id="keyword" class="input_search" onkeyup="fetch()">
+		<input type="text" name="s" placeholder="Search Code..." id="keyword" class="input_search">
+	</div>
 	</form>
-</div>
+
 	<?php
 	return ob_get_clean();
 }
@@ -59,24 +60,25 @@ add_action( 'wp_ajax_nopriv_search', 'search_callback' );
  */
 function search_callback() {
 	header( 'Content-Type: application/json' );
-	$levels = $_GET['regions'];
-	$people = array();
-
-	$products = 
+	$levels    = $_GET['regions'];
+	$keyword   = $_GET['keyword'];
+	$people    = array();
+	$tax_query = '' !== $levels ? array(
+		'taxonomy' => 'regions',
+		'field'    => 'term_id',
+		'terms'    => $levels,
+	) : null;
+	$products  =
 		array(
 			'post_type'   => 'software',
 			'numberposts' => - 1,
-			's'           => esc_attr( $_GET['keyword'] ),
+			's'           => $keyword,
 			'tax_query'   => array(
-				array(
-					'taxonomy' => 'regions',
-					'field'    => 'term_id',
-					'terms'    => $levels,
-				),
+				$tax_query,
 			),
 		);
 
-	$soft = new WP_Query ( $products );
+	$soft = new WP_Query( $products );
 
 	if ( $soft->have_posts() ) {
 		while ( $soft->have_posts() ) {
@@ -85,6 +87,7 @@ function search_callback() {
 					'title'   => get_the_title(),
 					'regions' => $levels,
 					'link'    => get_the_permalink(),
+					'search'  => $keyword,
 				);
 		}
 		wp_reset_query();
@@ -113,58 +116,4 @@ function search_scripts() {
 			'ajax_nonce' => wp_create_nonce( 'search' ),
 		)
 	);
-}
-
-
-/*
-==================
-Ajax Search
-======================
-*/
-add_action( 'wp_footer', 'ajax_fetch' );
-/**
- * Adds
- */
-function ajax_fetch() {
-	wp_enqueue_script( 'fetch', WPR_URL . '/assets/fetch.js', array( 'jquery' ), '1.0', true );
-	wp_localize_script(
-		'fetch',
-		'WPR',
-		array(
-			'ajax_url'   => admin_url( 'admin-ajax.php' ),
-			'ajax_nonce' => wp_create_nonce( 'fetch' ),
-		)
-	);
-}
-
-// the ajax function.
-add_action( 'wp_ajax_data_fetch', 'data_fetch' );
-add_action( 'wp_ajax_nopriv_data_fetch', 'data_fetch' );
-
-/**
- * Adds
- */
-function data_fetch() {
-
-	$the_query = new WP_Query( array( 'posts_per_page' => -1, 's' => esc_attr( $_POST['keyword'] ), 'post_type' => array( 'software' ) ) );
-	if ( $the_query->have_posts() ) :
-		echo '<ul>';
-		while ( $the_query->have_posts() ) : $the_query->the_post();
-			?>
-
-	<div class="software-card-simple">
-		<div class="software-card-simple-title-container">
-			<h2 class="scs-title">
-				<a href="<?php the_permalink(); ?>"> <?php the_title(); ?></a>
-			</h2>
-		</div>
-	</div>
-
-			<?php
-		endwhile;
-		echo '</ul>';
-		wp_reset_postdata();
-	endif;
-
-	die();
 }
